@@ -4,6 +4,13 @@
  * Phase 1 storage strategy:
  * - LocalStorage for persistence (single user device).
  * - Later replace storage functions with Supabase calls.
+ *
+ * Updates in this version:
+ * - Selected date concept (selectedISO) separate from created_at
+ * - Date displayed as mm.dd.yy, centered below weight
+ * - Tap date opens iOS native date scroller
+ * - Swipe right = previous day, swipe left = next day (future blocked)
+ * - Weight number centered, larger, bold; today’s weight styled via .is-today class
  */
 
 const STORAGE_KEY = "weight_app_entries_v1";
@@ -17,16 +24,18 @@ const els = {
   statusText: document.getElementById("statusText"),
   recentList: document.getElementById("recentList"),
   chartCanvas: document.getElementById("chart"),
+  swipeStage: document.getElementById("swipeStage"),
+  swipeTrack: document.getElementById("swipeTrack"),
 };
 
 let chart = null;
 let entries = []; // { entryDate: "YYYY-MM-DD", weight: number, createdAt: number }
+let selectedISO = null;
 
 /* ---------- Date helpers ---------- */
 
 function todayISODate() {
   const d = new Date();
-  // Local date -> YYYY-MM-DD
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -34,7 +43,6 @@ function todayISODate() {
 }
 
 function isoToMMDDYY(iso) {
-  // iso = "YYYY-MM-DD"
   const [y, m, d] = iso.split("-");
   const yy = y.slice(2);
   return `${m}.${d}.${yy}`;
@@ -48,6 +56,16 @@ function isFutureISODate(iso) {
   return selected.getTime() > today.getTime();
 }
 
+function shiftISO(iso, deltaDays) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + deltaDays);
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 /* ---------- Storage ---------- */
 
 function loadEntries() {
@@ -57,10 +75,9 @@ function loadEntries() {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    // Minimal validation
     return parsed
-      .filter(e => e && typeof e.entryDate === "string" && typeof e.weight === "number")
-      .map(e => ({
+      .filter((e) => e && typeof e.entryDate === "string" && typeof e.weight === "number")
+      .map((e) => ({
         entryDate: e.entryDate,
         weight: e.weight,
         createdAt: typeof e.createdAt === "number" ? e.createdAt : Date.now(),
@@ -82,21 +99,18 @@ function sortByEntryDateAsc(list) {
 
 function upsertEntry(entryDate, weight) {
   // One entry per day: overwrite if same entryDate exists
-  const next = entries.filter(e => e.entryDate !== entryDate);
+  const next = entries.filter((e) => e.entryDate !== entryDate);
   next.push({ entryDate, weight, createdAt: Date.now() });
   entries = sortByEntryDateAsc(next);
   saveEntries(entries);
 }
 
 function parseWeightInput(raw) {
-  // Accept "180", "180.2", "180,2" -> normalize
   const normalized = raw.trim().replace(",", ".");
   if (!normalized) return null;
   const n = Number(normalized);
   if (!Number.isFinite(n)) return null;
-  // Bound to something reasonable to catch accidental input
   if (n <= 0 || n > 1400) return null;
-  // 1 decimal precision display; store as number
   return Math.round(n * 10) / 10;
 }
 
@@ -114,13 +128,13 @@ function setSaveButtonState(state) {
 }
 
 function renderDateLabel() {
-  const iso = els.dateInput.value;
-  els.dateLabel.textContent = isoToMMDDYY(iso);
+  els.dateLabel.textContent = isoToMMDDYY(selectedISO);
+  els.dateInput.value = selectedISO; // keep picker synced
 }
 
-function formatListDate(iso) {
-  // Keep list minimal: mm.dd.yy
-  return isoToMMDDYY(iso);
+function updateTodayColor() {
+  const today = todayISODate();
+  els.weightInput.classList.toggle("is-today", selectedISO === today);
 }
 
 function renderRecentList() {
@@ -132,7 +146,7 @@ function renderRecentList() {
 
     const date = document.createElement("span");
     date.className = "recentDate";
-    date.textContent = formatListDate(e.entryDate);
+    date.textContent = isoToMMDDYY(e.entryDate);
 
     const w = document.createElement("span");
     w.className = "recentWeight";
@@ -145,39 +159,41 @@ function renderRecentList() {
 }
 
 function renderChart() {
-  const labels = entries.map(e => isoToMMDDYY(e.entryDate));
-  const data = entries.map(e => e.weight);
+  const labels = entries.map((e) => isoToMMDDYY(e.entryDate));
+  const data = entries.map((e) => e.weight);
 
   if (!chart) {
     chart = new Chart(els.chartCanvas, {
       type: "line",
       data: {
         labels,
-        datasets: [{
-          data,
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.1,
-        }]
+        datasets: [
+          {
+            data,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.1,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: true }
+          tooltip: { enabled: true },
         },
         scales: {
           x: {
             grid: { display: false },
-            ticks: { maxTicksLimit: 6 }
+            ticks: { maxTicksLimit: 6 },
           },
           y: {
             grid: { display: false },
-            ticks: { maxTicksLimit: 5 }
-          }
-        }
-      }
+            ticks: { maxTicksLimit: 5 },
+          },
+        },
+      },
     });
     return;
   }
@@ -189,25 +205,114 @@ function renderChart() {
 
 function renderAll() {
   renderDateLabel();
+  updateTodayColor();
   renderChart();
   renderRecentList();
 }
 
-/* ---------- Event wiring ---------- */
+/* ---------- Date picker ---------- */
 
 function openNativeDatePicker() {
-  // iOS: programmatically focusing a date input generally triggers the vertical scroller.
-  // Keep it visually hidden but accessible.
-  els.dateInput.showPicker?.(); // supported in some browsers
+  // iOS: focusing/clicking a date input triggers the vertical scroller
+  els.dateInput.showPicker?.();
   els.dateInput.focus();
   els.dateInput.click();
 }
+
+/* ---------- Navigation (swipe) ---------- */
+
+function shiftSelectedDay(deltaDays) {
+  const next = shiftISO(selectedISO, deltaDays);
+  if (isFutureISODate(next)) return; // block future
+  selectedISO = next;
+  renderAll();
+  setSaveButtonState("idle");
+  setStatus("");
+}
+
+function animateSwipe(dir, commitFn) {
+  const cls = dir === "right" ? "slide-right" : "slide-left";
+  els.swipeTrack.classList.add(cls);
+
+  window.setTimeout(() => {
+    els.swipeTrack.classList.remove(cls);
+    commitFn();
+  }, 140);
+}
+
+function addSwipeNavigation() {
+  let startX = 0;
+  let startY = 0;
+  let active = false;
+
+  const threshold = 40; // px
+  const restraint = 60; // px vertical tolerance
+
+  els.swipeStage.addEventListener(
+    "touchstart",
+    (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      active = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  els.swipeStage.addEventListener(
+    "touchmove",
+    (e) => {
+      if (!active || !e.touches || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      if (Math.abs(dy) > restraint) return;
+
+      els.swipeTrack.classList.remove("slide-left", "slide-right");
+      if (dx > 18) els.swipeTrack.classList.add("slide-right");
+      if (dx < -18) els.swipeTrack.classList.add("slide-left");
+    },
+    { passive: true }
+  );
+
+  els.swipeStage.addEventListener(
+    "touchend",
+    (e) => {
+      if (!active) return;
+      active = false;
+
+      els.swipeTrack.classList.remove("slide-left", "slide-right");
+
+      const touch = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : null;
+      const endX = touch ? touch.clientX : startX;
+      const endY = touch ? touch.clientY : startY;
+
+      const dx = endX - startX;
+      const dy = endY - startY;
+
+      if (Math.abs(dy) > restraint) return;
+      if (Math.abs(dx) < threshold) return;
+
+      // Your rule:
+      // swipe right -> previous day slides in
+      // swipe left  -> next day (future blocked)
+      if (dx > 0) {
+        animateSwipe("right", () => shiftSelectedDay(-1));
+      } else {
+        animateSwipe("left", () => shiftSelectedDay(+1));
+      }
+    },
+    { passive: true }
+  );
+}
+
+/* ---------- Save ---------- */
 
 function onSave() {
   setSaveButtonState("idle");
   setStatus("");
 
-  const iso = els.dateInput.value;
+  const iso = selectedISO;
   if (!iso) {
     setSaveButtonState("error");
     setStatus("Missing date.");
@@ -232,27 +337,25 @@ function onSave() {
   setSaveButtonState("saved");
   setStatus(`Saved ${weight} for ${isoToMMDDYY(iso)}.`);
 
-  // Reset saved state after a moment so the button can indicate next action
   window.setTimeout(() => setSaveButtonState("idle"), 900);
 }
 
 /* ---------- Init ---------- */
 
 function init() {
-  // Load existing entries (or start with a small seed if empty)
   entries = sortByEntryDateAsc(loadEntries());
 
-  // Set date to today by default
   const today = todayISODate();
+  selectedISO = today;
   els.dateInput.value = today;
 
-  // If empty, seed with a minimal demo series (remove later if you want)
+  // Seed minimal demo data if empty (remove later if desired)
   if (entries.length === 0) {
     const seed = [
       { entryDate: shiftISO(today, -14), weight: 184.6, createdAt: Date.now() },
       { entryDate: shiftISO(today, -10), weight: 183.9, createdAt: Date.now() },
-      { entryDate: shiftISO(today, -7),  weight: 183.2, createdAt: Date.now() },
-      { entryDate: shiftISO(today, -3),  weight: 182.8, createdAt: Date.now() },
+      { entryDate: shiftISO(today, -7), weight: 183.2, createdAt: Date.now() },
+      { entryDate: shiftISO(today, -3), weight: 182.8, createdAt: Date.now() },
     ];
     entries = sortByEntryDateAsc(seed);
     saveEntries(entries);
@@ -261,38 +364,40 @@ function init() {
   renderAll();
   setSaveButtonState("idle");
 
-  // Date picker behavior
+  // Date picker
   els.dateButton.addEventListener("click", openNativeDatePicker);
   els.dateInput.addEventListener("change", () => {
-    renderDateLabel();
+    const next = els.dateInput.value;
+    if (!next || isFutureISODate(next)) {
+      els.dateInput.value = selectedISO;
+      renderDateLabel();
+      setSaveButtonState("error");
+      setStatus("Future dates blocked.");
+      window.setTimeout(() => setSaveButtonState("idle"), 900);
+      return;
+    }
+    selectedISO = next;
+    renderAll();
     setSaveButtonState("idle");
     setStatus("");
   });
 
-  // Save behavior
+  // Save
   els.saveButton.addEventListener("click", onSave);
 
-  // Keyboard enter saves
+  // Enter saves
   els.weightInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") onSave();
   });
 
-  // Any edits reset saved indicator
+  // Any edits reset state
   els.weightInput.addEventListener("input", () => {
     setSaveButtonState("idle");
     setStatus("");
   });
-}
 
-// date shifting helper
-function shiftISO(iso, deltaDays) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + deltaDays);
-  const yyyy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  // Swipe navigation
+  addSwipeNavigation();
 }
 
 init();
