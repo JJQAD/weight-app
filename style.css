@@ -1,175 +1,111 @@
 :root{
-  --bg: #ffffff;
-  --fg: #111111;
-  --muted: #6b6b6b;
-  --line: #e6e6e6;
+  --bg:#ffffff;
+  --fg:#111111;
+  --muted:#6b6b6b;
+  --line:#e6e6e6;
 
-  --btnIdle: #111111;
-  --btnSaved: #2a7a3b;   /* saved state */
-  --btnError: #b00020;   /* invalid input */
+  /* PDF-like red-orange */
+  --accent:#e23b1f;
 }
 
-*{ box-sizing: border-box; }
+*{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .app{
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 18px 18px 28px;
+  max-width:520px;
+  margin:0 auto;
+  padding:18px 18px 28px;
 }
 
-.top{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap: 12px;
-  margin-top: 6px;
-  margin-bottom: 18px;
-}
-
-.dateButton{
-  appearance:none;
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  width: 100%;
-  display:flex;
-  justify-content:center;
-}
-
-.dateLabel{
-  font-size: 18px;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  margin-top: -6px;   /* pulls date closer to weight */
-}
-
-.dateInput{
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 1px;
-  height: 1px;
+.title{
+  text-align:center;
+  font-size:13px;
+  letter-spacing:0.10em;
+  color:var(--muted);
+  margin-top:6px;
+  margin-bottom:10px;
 }
 
 .entry{
-   margin-bottom: 16px;
   display:flex;
   flex-direction:column;
   align-items:center;
+  margin-bottom:12px;
 }
 
-.weightRow{
-  width: 100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap: 8px;
-}
-
-.weightInput{
-  width: 100%;
-  text-align: center;
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  font-size: 132px;
-  line-height: 0.92;
-  letter-spacing: -0.03em;
-  font-weight: 400;          /* was bold; now regular */
-  color: var(--fg);
-}
-
-.weightInput.is-today{
-  color: #b34a00;       /* dark orange */
-}
-
-.weightInput::placeholder{
-  color: #d0d0d0;
-}
-
-.statusText{
-  margin-top: 8px;
-  font-size: 14px;
-  color: var(--muted);
-  min-height: 18px;
-}
-
-.chartWrap{
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-  margin-top: 12px;
-}
-
-.listWrap{
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-  margin-top: 16px;
-}
-
-.listHeader{
-  font-size: 14px;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-  margin-bottom: 10px;
-}
-
-.recentList{
-  list-style:none;
-  padding:0;
-  margin:0;
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-
-.recentList li{
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  padding: 0;
-  margin: 0;
-}
-
-.recentDate{
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.recentWeight{
-  font-size: 18px;
-  color: var(--fg);
-  letter-spacing: 0.01em;
-}
-
-/* iPhone portrait preference: design for portrait without forcing it */
-@media (min-width: 600px){
-  .app{ padding-top: 28px; }
-  .weightInput{ font-size: 96px; }
-}
-
-/* Slide animation container */
+/* Swipe container: allow vertical page scroll, JS will intercept horizontal */
 .swipeStage{
-  width: 100%;
-  overflow: hidden;
+  width:100%;
+  overflow:hidden;
+  touch-action: pan-y;
 }
 
 .swipeTrack{
-  width: 100%;
+  width:100%;
   transform: translateX(0);
-  transition: transform 180ms ease-out;
 }
 
-.swipeTrack.slide-left{  transform: translateX(-14%); }
-.swipeTrack.slide-right{ transform: translateX(14%);  }
+.weightRow{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+.weightInput{
+  width:100%;
+  text-align:center;
+  border:none;
+  outline:none;
+  background:transparent;
+  padding:0;
+  margin:0;
+  font-size:132px;     /* large */
+  line-height:0.92;
+  letter-spacing:-0.03em;
+  font-weight:400;     /* regular */
+  color:var(--fg);
+}
+
+.weightInput.is-today{
+  color:var(--accent);
+}
+
+.weightInput::placeholder{
+  color:#d0d0d0;
+}
+
+.dateLabel{
+  text-align:center;
+  font-size:18px;
+  letter-spacing:0.06em;
+  color:var(--accent);
+  margin-top:-10px; /* closer to weight */
+}
+
+.statusText{
+  margin-top:10px;
+  font-size:14px;
+  color:var(--muted);
+  min-height:18px;
+}
+
+.chartWrap{
+  border-top:1px solid var(--line);
+  padding-top:14px;
+  margin-top:8px;
+}
+
+/* Slightly larger on bigger screens */
+@media (min-width: 600px){
+  .app{ padding-top:28px; }
+  .weightInput{ font-size:148px; }
+}
