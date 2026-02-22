@@ -34,7 +34,14 @@
     </section>
 
     <section class="chartWrap">
-      <canvas id="chart" height="220"></canvas>
+      <div class="rangeSwipeStage" id="rangeSwipeStage" aria-label="Chart range selector">
+        <div class="rangeSwipeTrack" id="rangeSwipeTrack">
+          <div class="rangeLabel" id="rangeLabel">week</div>
+        </div>
+      </div>
+      <div class="chartPanel">
+        <canvas id="chart" aria-label="Weight trend chart"></canvas>
+      </div>
     </section>
   </main>
 
