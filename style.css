@@ -104,7 +104,7 @@ body{
   letter-spacing:0.08em;
   text-transform:lowercase;
   color:var(--muted);
-  margin-bottom:24px;
+  margin-top:18px;
 }
 
 .chartPanel{
