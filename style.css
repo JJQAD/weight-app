@@ -3,8 +3,6 @@
   --fg:#111111;
   --muted:#6b6b6b;
   --line:#e6e6e6;
-
-  /* PDF-like red-orange */
   --accent:#e23b1f;
 }
 
@@ -22,7 +20,7 @@ body{
 .app{
   max-width:520px;
   margin:0 auto;
-  padding:18px 18px 28px;
+  padding:18px 18px max(28px, env(safe-area-inset-bottom));
 }
 
 .title{
@@ -41,14 +39,15 @@ body{
   margin-bottom:12px;
 }
 
-/* Swipe container: allow vertical page scroll, JS will intercept horizontal */
-.swipeStage{
+.swipeStage,
+.rangeSwipeStage{
   width:100%;
   overflow:hidden;
   touch-action: pan-y;
 }
 
-.swipeTrack{
+.swipeTrack,
+.rangeSwipeTrack{
   width:100%;
   transform: translateX(0);
 }
@@ -68,27 +67,22 @@ body{
   background:transparent;
   padding:0;
   margin:0;
-  font-size:132px;     /* large */
+  font-size:clamp(76px, 30vw, 132px);
   line-height:0.92;
   letter-spacing:-0.03em;
-  font-weight:400;     /* regular */
+  font-weight:400;
   color:var(--fg);
 }
 
-.weightInput.is-today{
-  color:var(--accent);
-}
-
-.weightInput::placeholder{
-  color:#d0d0d0;
-}
+.weightInput.is-today{ color:var(--accent); }
+.weightInput::placeholder{ color:#d0d0d0; }
 
 .dateLabel{
   text-align:center;
   font-size:18px;
   letter-spacing:0.06em;
   color:var(--accent);
-  margin-top:-10px; /* closer to weight */
+  margin-top:-8px;
 }
 
 .statusText{
@@ -100,12 +94,29 @@ body{
 
 .chartWrap{
   border-top:1px solid var(--line);
-  padding-top:14px;
   margin-top:8px;
+  padding-top:24px;
 }
 
-/* Slightly larger on bigger screens */
+.rangeLabel{
+  text-align:center;
+  font-size:15px;
+  letter-spacing:0.08em;
+  text-transform:lowercase;
+  color:var(--muted);
+  margin-bottom:24px;
+}
+
+.chartPanel{
+  position:relative;
+  min-height:230px;
+}
+
+#chart{
+  width:100% !important;
+  height:230px !important;
+}
+
 @media (min-width: 600px){
   .app{ padding-top:28px; }
-  .weightInput{ font-size:148px; }
 }
